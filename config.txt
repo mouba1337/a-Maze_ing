@@ -1,0 +1,10 @@
+WIDTH=20
+HEIGHT=20
+ENTRY=0,0
+EXIT=6,6
+OUTPUT_FILE=maze.txt
+algo=dfs
+
+# Paramètres optionnels
+PERFECT=false
+SEED=2
