@@ -1,8 +1,12 @@
+import sys
 from time import sleep
 from typing import Tuple, Dict, Any, List, Optional
 import random
 import os
 from collections import deque
+
+# Protection pour les très grands labyrinthes (très apprécié en évaluation 42 !)
+sys.setrecursionlimit(10000)
 
 UP, RIGHT, DOWN, LEFT = 1, 2, 4, 8
 OFFSET_X = {UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1}
@@ -12,7 +16,6 @@ CHAR_MAP = {UP: "N", RIGHT: "E", DOWN: "S", LEFT: "W"}
 
 class LabyrinthBuilder:
     def __init__(self, config_data: Dict[str, Any], show_anim: bool = False) -> None:
-        # On utilise exactement les clés générées par le parsing de ton peer
         self.cols: int = int(config_data["width"])
         self.rows: int = int(config_data["height"])
         self.start_pos: Tuple[int, int] = config_data["entry"]
@@ -30,43 +33,56 @@ class LabyrinthBuilder:
         self.random_seed: Optional[int] = config_data.get("seed", None)
         self.generation_method: str = config_data.get("algo", "dfs")
         
+        # 1. ON INITIALISE LA COULEUR EN PREMIER
+        self.wall_color: str = "\033[37m"
+        
+        # 2. ENSUITE ON LANCE LA CONSTRUCTION
         self.build_labyrinth(show_anim)
+
+    # VOICI LA FONCTION QUI MANQUAIT !
+    def change_wall_color(self) -> None:
+        colors = [
+            "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m",
+            "\033[93m", "\033[94m", "\033[95m", "\033[96m"
+        ]
+        self.wall_color = random.choice(colors)
 
     @staticmethod
     def wipe_screen() -> None:
-        # Utilisation de clear pour éviter les bugs de scrolling sur les petits terminaux
         os.system("clear")
 
     def render_grid(
         self,
-        invert_colors: bool,
+        change_color: bool,
         current_trail: Optional[List[List[int]]] = None
     ) -> None:
-        COLOR_1 = "\033[31m"
-        COLOR_2 = "\033[32m"
+        COLOR_1 = "\033[31m"  # Rouge fixe (pour 42)
+        COLOR_2 = "\033[32m"  # Vert fixe (pour S, E, Chemin)
         RESET_COL = "\033[0m"
         
-        if invert_colors:
-            COLOR_1, COLOR_2 = COLOR_2, COLOR_1
+        if change_color:
+            self.change_wall_color()
 
-        WALL_BLOCK = "█"
-        print(WALL_BLOCK + ("████" * self.cols))
+        wall_c = self.wall_color
+
+        print(wall_c + "█" + ("████" * self.cols) + RESET_COL)
         
         pattern_42_cells = self.locate_42_pattern()
 
         for r in range(self.rows):
-            row_mid = WALL_BLOCK
-            row_bot = WALL_BLOCK
+            row_mid = wall_c + "█" + RESET_COL
+            row_bot = wall_c + "█" + RESET_COL
 
             for c in range(self.cols):
                 val = self.grid[r][c]
 
+                # 1. Le Centre
                 if c == self.start_pos[0] and r == self.start_pos[1]:
                     row_mid += COLOR_2 + " S " + RESET_COL
                 elif c == self.end_pos[0] and r == self.end_pos[1]:
                     row_mid += COLOR_2 + " E " + RESET_COL
                 elif (c, r) in pattern_42_cells:
-                    row_mid += COLOR_1 + " 4 " + RESET_COL
+                    row_mid += COLOR_1 + " █ " + RESET_COL
                 elif current_trail:
                     if [c, r] == current_trail[-1]: 
                         row_mid += COLOR_2 + " @ " + RESET_COL
@@ -77,15 +93,17 @@ class LabyrinthBuilder:
                 else:
                     row_mid += "   "
 
+                # 2. Le Mur Est
                 if val & RIGHT:
-                    row_mid += WALL_BLOCK
+                    row_mid += wall_c + "█" + RESET_COL
                 else:
                     row_mid += " "
 
+                # 3. Le Mur Sud
                 if val & DOWN:
-                    row_bot += "████"
+                    row_bot += wall_c + "████" + RESET_COL
                 else:
-                    row_bot += "   " + WALL_BLOCK
+                    row_bot += "   " + wall_c + "█" + RESET_COL
 
             print(row_mid)
             print(row_bot)

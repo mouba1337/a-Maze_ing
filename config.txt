@@ -7,4 +7,3 @@ algo=dfs
 
 # Paramètres optionnels
 PERFECT=false
-SEED=2

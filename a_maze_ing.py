@@ -33,7 +33,7 @@ if __name__ == "__main__":
             print("=== A-MAZE-ING ===")
             print("1 - Re-generate a new maze")
             print("2 - Show/hide path from entry to exit")
-            print("3 - Swap maze colors")
+            print("3 - Change maze colors randomly") # <-- On a changé le texte du menu
             print("4 - Quit")
             i = input("choice? (1-4): ")
             
@@ -49,17 +49,17 @@ if __name__ == "__main__":
                 f = not f
                 builder.wipe_screen()
                 if f:
-                    builder.render_grid(R, builder.solution_coords)
+                    builder.render_grid(False, builder.solution_coords)
                 else:
-                    builder.render_grid(R)
+                    builder.render_grid(False)
                     
             if i == "3":
                 builder.wipe_screen()
-                R = not R
+                # On envoie True au premier paramètre pour dire "Tire une nouvelle couleur !"
                 if f:
-                    builder.render_grid(R, builder.solution_coords)
+                    builder.render_grid(True, builder.solution_coords)
                 else:
-                    builder.render_grid(R)
+                    builder.render_grid(True)
                     
     except Exception as e:
         print(f"A_MAZE_ING: an error occurred: {e}")
