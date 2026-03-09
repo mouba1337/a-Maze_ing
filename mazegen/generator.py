@@ -31,11 +31,6 @@ class MazeGenerator:
             [0b1111 for _ in range(self.cols)] for _ in range(self.rows)
         ]
 
-    def __str__(self) -> str:
-        text_out = ""
-        for row_data in self.grid:
-            text_out += " ".join(f"{c_val:04b}" for c_val in row_data) + "\n"
-        return text_out
 
     def build_labyrinth(self, render_callback: Optional[Callable] = None) -> None:
         if self.random_seed is not None:
