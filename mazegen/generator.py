@@ -3,8 +3,6 @@ import random
 from typing import Tuple, Dict, Any, List, Callable, Optional
 from collections import deque
 
-# Protection pour les très grands labyrinthes
-
 
 UP, RIGHT, DOWN, LEFT = 1, 2, 4, 8
 OFFSET_X = {UP: 0, RIGHT: 1, DOWN: 0, LEFT: -1}
@@ -14,6 +12,21 @@ CHAR_MAP = {UP: "N", RIGHT: "E", DOWN: "S", LEFT: "W"}
 
 
 class MazeGenerator:
+    """
+    A reusable library for generating, solving, and exporting mazes.
+
+    This class generates a maze using a Randomized Depth-First Search (DFS)
+    algorithm and solves it using Breadth-First Search (BFS).
+
+    Args:
+        config_data (Dict[str, Any]): A dictionary containing
+        the maze configuration.
+
+    Attributes:
+        grid (List[List[int]]): The generated maze structure.
+        solution_str (str): The shortest path from entry to exit.
+        solution_coords (List[List[int]]): The exact path coordinates.
+    """
     def __init__(self, config_data: Dict[str, Any]) -> None:
         self.cols: int = int(config_data["width"])
         self.rows: int = int(config_data["height"])
@@ -22,27 +35,43 @@ class MazeGenerator:
         self.is_perfect: bool = config_data["perfect"]
         self.export_path: str = config_data["output_file"]
         self.random_seed: Optional[int] = config_data.get("seed", None)
-
         self.solution_str: str = ""
         self.solution_coords: List[List[int]] = []
-
-        # Grille pleine par défaut (0b1111 = tous les murs fermés)
         self.grid: List[List[int]] = [
             [0b1111 for _ in range(self.cols)] for _ in range(self.rows)
         ]
 
-
-    def build_labyrinth(self, render_callback: Optional[Callable] = None) -> None:
+    def build_labyrinth(
+        self,
+        render_callback: Optional[Callable] = None,
+    ) -> None:
+        """
+        Coordinates the complete maze generation, solving,
+        and exporting pipeline.
+        Args:
+            render_callback (Optional[Callable]): An optional
+            function called after
+                every carving step, used for UI animation.
+        """
         if self.random_seed is not None:
             random.seed(self.random_seed)
 
         pattern_42_cells = self.locate_42_pattern()
 
-        if self.start_pos in pattern_42_cells or self.end_pos in pattern_42_cells:
+        if (
+            self.start_pos in pattern_42_cells
+            or self.end_pos in pattern_42_cells
+        ):
             raise ValueError("Entry or exit overlaps with the 42 pattern.")
 
         explored = [[False] * self.cols for _ in range(self.rows)]
-        self.drill_dfs(self.start_pos[0], self.start_pos[1], explored, pattern_42_cells, render_callback)
+        self.drill_dfs(
+            self.start_pos[0],
+            self.start_pos[1],
+            explored,
+            pattern_42_cells,
+            render_callback
+        )
 
         if not self.is_perfect:
             self.create_cycles(pattern_42_cells)
@@ -58,6 +87,19 @@ class MazeGenerator:
         pattern_42_cells: List[Tuple[int, int]],
         render_callback: Optional[Callable],
     ) -> None:
+        """
+        Carves out the maze paths using a randomized Depth-First Search
+        (DFS) algorithm.
+
+        Args:
+            cx (int): The current X coordinate.
+            cy (int): The current Y coordinate.
+            explored (List[List[bool]]): A 2D tracking grid of visited cells.
+            pattern_42_cells (List[Tuple[int, int]]): Protected coordinates
+            for the '42' shape.
+            render_callback (Optional[Callable]): An optional callback
+            for step-by-step rendering.
+        """
         explored[cy][cx] = True
         ways = [UP, RIGHT, DOWN, LEFT]
         random.shuffle(ways)
@@ -77,7 +119,13 @@ class MazeGenerator:
             ):
                 self.grid[cy][cx] &= ~w
                 self.grid[next_y][next_x] &= ~REVERSE_DIR[w]
-                self.drill_dfs(next_x, next_y, explored, pattern_42_cells, render_callback)
+                self.drill_dfs(
+                    next_x,
+                    next_y,
+                    explored,
+                    pattern_42_cells,
+                    render_callback
+                )
 
     def _safe_to_break(self, cx: int, cy: int, way: int) -> bool:
         """
@@ -93,18 +141,42 @@ class MazeGenerator:
             return (self.grid[y][x] & d) == 0
 
         if way in (RIGHT, LEFT):
-            if no_wall(cx, cy, UP) and no_wall(next_x, next_y, UP) and no_wall(cx, cy - 1, way):
+            if (
+                no_wall(cx, cy, UP)
+                and no_wall(next_x, next_y, UP)
+                and no_wall(cx, cy - 1, way)
+            ):
                 return False
-            if no_wall(cx, cy, DOWN) and no_wall(next_x, next_y, DOWN) and no_wall(cx, cy + 1, way):
+            if (
+                no_wall(cx, cy, DOWN)
+                and no_wall(next_x, next_y, DOWN)
+                and no_wall(cx, cy + 1, way)
+            ):
                 return False
         elif way in (UP, DOWN):
-            if no_wall(cx, cy, LEFT) and no_wall(next_x, next_y, LEFT) and no_wall(cx - 1, cy, way):
+            if (
+                no_wall(cx, cy, LEFT)
+                and no_wall(next_x, next_y, LEFT)
+                and no_wall(cx - 1, cy, way)
+            ):
                 return False
-            if no_wall(cx, cy, RIGHT) and no_wall(next_x, next_y, RIGHT) and no_wall(cx + 1, cy, way):
+            if (
+                no_wall(cx, cy, RIGHT)
+                and no_wall(next_x, next_y, RIGHT)
+                and no_wall(cx + 1, cy, way)
+            ):
                 return False
         return True
 
     def create_cycles(self, pattern_42_cells: List[Tuple[int, int]]) -> None:
+        """
+        Removes random walls to create an imperfect maze with
+        multiple valid paths.
+
+        Args:
+            pattern_42_cells (List[Tuple[int, int]]): Protected
+            coordinates that cannot be broken.
+        """
         cycle_target = int(self.cols * self.rows * 0.15)
         tries = 0
         max_tries = cycle_target * 10
@@ -133,7 +205,14 @@ class MazeGenerator:
                     cycle_target -= 1
 
     def find_shortest_path(self) -> None:
-        search_q: deque[Tuple[int, int, List[str]]] = deque([(self.start_pos[0], self.start_pos[1], [])])
+        """
+        Solves the maze using a Breadth-First Search (BFS) algorithm
+        to find the shortest path.
+        Updates the solution_str and solution_coords attributes.
+        """
+        search_q: deque[Tuple[int, int, List[str]]] = deque([
+            (self.start_pos[0], self.start_pos[1], [])
+        ])
         scanned = [[False] * self.cols for _ in range(self.rows)]
         scanned[self.start_pos[1]][self.start_pos[0]] = True
 
@@ -151,7 +230,11 @@ class MazeGenerator:
                 next_x = cx + OFFSET_X[w]
                 next_y = cy + OFFSET_Y[w]
 
-                if 0 <= next_x < self.cols and 0 <= next_y < self.rows and not scanned[next_y][next_x]:
+                if (
+                    0 <= next_x < self.cols
+                    and 0 <= next_y < self.rows
+                    and not scanned[next_y][next_x]
+                ):
                     scanned[next_y][next_x] = True
                     search_q.append((next_x, next_y, route + [CHAR_MAP[w]]))
 
@@ -159,6 +242,16 @@ class MazeGenerator:
         self.solution_coords = []
 
     def _trace_coordinates(self, route: List[str]) -> List[List[int]]:
+        """
+        Converts a string of directional moves into exact (x, y) coordinates.
+
+        Args:
+            route (List[str]): The sequence of moves (e.g., ['N', 'E', 'S']).
+
+        Returns:
+            List[List[int]]: A list of [x, y] coordinate
+            pairs tracing the path.
+        """
         trail_coords = []
         cx, cy = self.start_pos
         for step_char in route:
@@ -171,23 +264,41 @@ class MazeGenerator:
         return trail_coords
 
     def export_to_disk(self) -> None:
-        with open(self.export_path, "w") as file_out:
-            for row_data in self.grid:
-                line_str = "".join(format(cell, "X") for cell in row_data)
-                file_out.write(line_str + "\n")
-            file_out.write(f"\n{self.start_pos[0]},{self.start_pos[1]}\n")
-            file_out.write(f"{self.end_pos[0]},{self.end_pos[1]}\n")
-            file_out.write(self.solution_str + "\n")
+        """
+        Writes the generated maze grid, entry/exit coordinates, and solution
+        to the specified output file using hexadecimal wall representation.
+        """
+        try:
+            with open(self.export_path, "w") as file_out:
+                for row_data in self.grid:
+                    line_str = "".join(format(cell, "X") for cell in row_data)
+                    file_out.write(line_str + "\n")
+                file_out.write(f"\n{self.start_pos[0]},{self.start_pos[1]}\n")
+                file_out.write(f"{self.end_pos[0]},{self.end_pos[1]}\n")
+                file_out.write(self.solution_str + "\n")
+        except OSError as e:
+            print("Error: Could not write maze to"
+                  f"'{self.export_path}'. Details: {e}")
+            sys.exit(1)
 
     def locate_42_pattern(self) -> List[Tuple[int, int]]:
+        """
+        Calculates the exact grid coordinates required to draw a
+        '42' pattern in the center.
+
+        Returns:
+            List[Tuple[int, int]]: A list of (x, y) coordinates making
+            up the '42' shape.
+        """
         if self.cols < 9 or self.rows < 7:
             return []
         center = (self.cols // 2, self.rows // 2)
         c_x, c_y = center
         return [
-            (c_x - 3, c_y - 2), (c_x - 3, c_y - 1), (c_x - 3, c_y), (c_x - 2, c_y),
-            (c_x - 1, c_y), (c_x - 1, c_y + 1), (c_x - 1, c_y + 2),
-            (c_x + 1, c_y - 2), (c_x + 1, c_y), (c_x + 1, c_y + 1), (c_x + 1, c_y + 2),
-            (c_x + 2, c_y - 2), (c_x + 2, c_y), (c_x + 2, c_y + 2),
-            (c_x + 3, c_y - 2), (c_x + 3, c_y - 1), (c_x + 3, c_y), (c_x + 3, c_y + 2),
+            (c_x - 3, c_y - 2), (c_x - 3, c_y - 1), (c_x - 3, c_y),
+            (c_x - 2, c_y), (c_x - 1, c_y), (c_x - 1, c_y + 1),
+            (c_x - 1, c_y + 2), (c_x + 1, c_y - 2), (c_x + 1, c_y),
+            (c_x + 1, c_y + 1), (c_x + 1, c_y + 2), (c_x + 2, c_y - 2),
+            (c_x + 2, c_y), (c_x + 2, c_y + 2), (c_x + 3, c_y - 2),
+            (c_x + 3, c_y - 1), (c_x + 3, c_y), (c_x + 3, c_y + 2),
         ]

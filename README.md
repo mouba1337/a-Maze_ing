@@ -1,301 +1,116 @@
-*This project has been created as part of the 42 curriculum by kraghib and berrabia.*
+This project has been created as part of the 42 curriculum by mhend, eanass. ￼
 
-# A-Maze-Ing
+Description
+A-Maze-ing is a Python-based procedural maze generator and solver. It parses a configuration file to construct a labyrinth of specified dimensions, optionally ensuring it is a "perfect" maze (only one valid path from start to finish). The project features a built-in terminal visualizer with step-by-step animation, shortest-path calculation, and a reusable Python package architecture. It also embeds a mandatory "42" shape inside the generated walls!￼
++3
 
-## Description
+Instructions
+1. Installation
+We recommend using a virtual environment to avoid conflicts.￼
 
-**A-Maze-Ing** is a configurable maze generator and solver written in Python.
-The project generates ASCII mazes based on a configuration file, supports multiple generation algorithms, enforces a special “42” pattern constraint, and computes the shortest path from entry to exit.
-
-The maze can be:
-- **Perfect** (only one path between any two cells)
-- **Imperfect** (with loops)
-- Generated using **DFS (recursive backtracking)** or **Prim’s / BFS-style algorithm**
-- Rendered interactively in the terminal with optional path visualization
-
-The project is designed with **reusability** in mind: the maze generation logic lives in a standalone, importable module (`mazegen`) that can be reused in future projects.
-
----
-
-## Project Structure
-
-```
-
-.
-├── Makefile
-├── README.md
-├── a_maze_ing.py
-├── config.txt
-└── mazegen/
-├── **init**.py
-├── generator.py
-└── parse.py
-
-````
-
----
-
-## Instructions
-
-### Requirements
-- Python **3.10+**
-- Unix-like terminal (for ANSI colors and `clear`)
-
-### Installation
-
-Dependencies are installed automatically via the Makefile:
-
-```bash
+Bash
+￼
+python3 -m virtualenv env
+source env/bin/activate
 make install
-````
+2. Execution
+To run the main program with the visualizer, pass the configuration file as the only argument:￼
++1
 
-### Run the Program
-
-```bash
-make run
-```
-
-or manually:
-
-```bash
+Bash
+￼
 python3 a_maze_ing.py config.txt
-```
+3. Linting and Cleanup
 
-### Debug Mode
+Bash
+￼
+make lint   # Runs flake8 and strict mypy checks
+make clean  # Removes __pycache__, .mypy_cache, and build artifacts
+Configuration File Format
+The program requires a text file containing KEY=VALUE pairs. Lines starting with # are ignored as comments.￼
++1
 
-```bash
-make debug
-```
 
-### Clean Cache Files
+WIDTH: Maze width (number of columns).￼
++1
 
-```bash
-make clean
-```
 
-### Linting
+HEIGHT: Maze height (number of rows).￼
++1
 
-```bash
-make lint
-make lint-strict
-```
 
----
+ENTRY: Start coordinates x,y.￼
++1
 
-## Usage
 
-Once running, an interactive menu is displayed:
+EXIT: End coordinates x,y.￼
++1
 
-```
-=== A-MAZE-ING ===
-1 - Re-generate a new maze
-2 - Show/hide path from entry to exit
-3 - Swap maze colors
-4 - Quit
-```
 
-* **Re-generate** creates a new maze using the same configuration
-* **Show/hide path** toggles the shortest path visualization
-* **Swap colors** inverts the terminal color scheme
-* **Quit** exits the program
+OUTPUT_FILE: Name of the hexadecimal text file to export the maze to.￼
++1
 
----
+PERFECT: True or False. If True, generates a maze with a single unique path.￼
++1
 
-## Configuration File Format
 
-The maze is fully driven by a configuration file (`config.txt`).
+seed (Optional): Integer to guarantee reproducibility of the maze.￼
 
-### Required Keys
+Algorithm Choices
 
-```txt
-width=21
-height=15
-entry=0,0
-exit=20,14
-perfect=true
-output_file=maze.txt
-```
+Generation: We chose a Randomized Depth-First Search (DFS) algorithm. We chose this because DFS naturally creates deep, winding corridors with a high "branching factor," which provides the classic, difficult aesthetic expected from a labyrinth.
+Solving: We chose Breadth-First Search (BFS). We chose this because BFS explores the grid layer-by-layer, guaranteeing that the path it finds is the mathematically shortest route between the entry and exit.￼
++1
 
-### Optional Keys
+Code Reusability (Using the mazegen package)
+Our maze generation logic is completely isolated in the mazegen package, which can be built into a .whl file and installed via pip in any future project.￼
++2
 
-```txt
-seed=42
-algo=dfs
-```
 
-### Full Specification
+How to instantiate and use it: ￼
 
-| Key           | Type   | Description              |
-| ------------- | ------ | ------------------------ |
-| `width`       | int    | Maze width (≥ 9)         |
-| `height`      | int    | Maze height (≥ 7)        |
-| `entry`       | x,y    | Entry cell coordinates   |
-| `exit`        | x,y    | Exit cell coordinates    |
-| `perfect`     | bool   | `true` = perfect maze    |
-| `output_file` | string | File where maze is saved |
-| `seed`        | int    | Random seed (optional)   |
-| `algo`        | string | `dfs`, `bfs`, or `prim`  |
+Python
+￼
+from mazegen.generator import MazeGenerator
 
- Entry and exit **must not** overlap and **must not be placed on the “42” pattern**.
+# 1. Pass custom parameters via a dictionary
+config = {
+    "width": 15,
+    "height": 15,
+    "entry": (0, 0),
+    "exit": (14, 14),
+    "perfect": True,
+    "output_file": "my_maze.txt",
+    "seed": 42
+}
 
----
+# 2. Instantiate and run the generator
+generator = MazeGenerator(config)
+generator.build_labyrinth()
 
-## Maze Generation Algorithms
+# 3. Access the generated structure and solution
+maze_grid = generator.grid             # 2D list of bitmask integers
+shortest_path = generator.solution_str # String of 'N', 'S', 'E', 'W'
+print(f"Path to exit: {shortest_path}")
+Team & Project Management
 
-### Implemented Algorithms
+Roles: mhend focused primarily on the core algorithm logic (DFS/BFS), grid mathematics, and Python packaging/virtual environments. eanass focused on the configuration parsing, error handling, and the terminal ANSI visualizer/animation engine. (Note: Feel free to swap/edit these roles!)￼
 
-* **DFS (Recursive Backtracking)** — default
-* **Prim’s / BFS-style randomized frontier algorithm**
 
-### Chosen Default: DFS
+Anticipated Planning vs. Reality: We originally planned to build the visualizer last. However, we realized quickly that debugging the DFS algorithm was impossible without seeing the maze, so we shifted the visualizer to week 1.￼
 
-**Why DFS?**
 
-* Simple and reliable
-* Produces long corridors and visually pleasing mazes
-* Easy to control and extend
-* Ideal for animated generation
+What Worked Well: Pair programming the coordinate logic saved us from off-by-one errors.￼
 
-Prim’s algorithm is also available for users who prefer denser, more uniform mazes.
 
----
+What Could Be Improved: We underestimated how strict mypy typing and Python packaging (pyproject.toml) would be, which caused delays near the deadline.￼
 
-## Maze Solving
 
-* Solving is done using **Breadth-First Search (BFS)**
-* Guarantees the **shortest path**
-* The solution is:
+Tools Used: Git for version control, VS Code, make for automation, virtualenv for environment isolation, and build/setuptools for .whl packaging.￼
 
-  * Stored as a direction string (`N`, `E`, `S`, `W`)
-  * Reconstructed into a coordinate path
-  * Optionally animated in the terminal
+Resources & AI Usage
 
----
+Classic Resources: We utilized GeeksforGeeks and various YouTube tutorials to deeply understand graph theory concepts (specifically DFS and BFS traversal). Peer learning was heavily used to validate our coordinate math and test our edge cases.￼
 
-## Reusable Code
 
-The following parts are **fully reusable**:
-
-### `mazegen.generator.MazeGenerator`
-
-* Standalone maze generation class
-* Can be imported and used without the CLI
-* Supports custom size, seed, algorithms, rendering
-* Exposes:
-
-  * `maze` structure
-  * `solved_path`
-  * `path_list`
-
-### `mazegen.parse.parse_config`
-
-* Generic config parser with validation
-* Can be reused for other config-driven projects
-
-Example reuse:
-
-```python
-from mazegen import MazeGenerator, parse_config
-
-config = parse_config("config.txt")
-maze = MazeGenerator(config, render=False)
-print(maze.solved_path)
-```
-
----
-
-## Advanced Features
-
-* Multiple generation algorithms
-* Perfect / imperfect maze toggle
-* Animated generation and solving
-* ANSI-colored rendering
-* Enforced “42” pattern inside the maze
-* Deterministic generation via seed
-* Exported maze file with solution
-
----
-
-## Team & Project Management
-
-### Team
-
-* **khalilraghib** — Design, implementation, algorithms, testing
-
-### Planning
-
-* Initial focus on core DFS maze generation
-* Early refactor to isolate logic into a reusable module
-* Added solver, rendering, and configuration validation
-* Extended to support multiple algorithms and loops
-
-### What Worked Well
-
-* Early modular design
-* Clear separation between parsing, generation, and UI
-* Strong typing and linting improved reliability
-
-### What Could Be Improved
-
-* More maze algorithms (Kruskal, Eller)
-* Graphical (non-ASCII) output
-* Performance optimizations for very large mazes
-
-### Tools Used
-
-* `make`
-* `mypy`
-* `flake8`
-* Python standard library
-* Terminal ANSI rendering
-
----
-
-## Resources
-
-### Technical References
-
-* Wikipedia – Maze generation algorithms
-* DFS / BFS graph traversal
-* Breadth-First Search for shortest paths
-* Python `deque` documentation
-
-### AI Usage
-
-AI was used as a **development assistant**:
-
-* Clarifying algorithm choices
-* Reviewing architecture and typing
-* Improving documentation structure
-* Ensuring 42 subject compliance
-
-All design decisions, implementation, and validation were done by the project author.
-
----
-
-## Output Example
-
-```
-+---+---+---+---+---+---+---+---+---+
-| s   p   p   p   p   p   p   p   p |
-+---+---+---+---+---+---+---+---+   +
-|   | 4 |           | 4 | 4 | 4 | p |
-+   +---+   +   +   +---+---+---+   +
-|   | 4 |                   | 4 | p |
-+   +---+---+---+   +---+---+---+   +
-|   | 4 | 4 | 4 |   | 4 | 4 | 4 | p |
-+   +---+---+---+   +---+---+---+   +
-|           | 4 |   | 4 |         p |
-+---+   +   +---+   +---+---+---+   +
-|           | 4 |   | 4 | 4 | 4 | p |
-+   +   +   +---+   +---+---+---+   +
-|                         e   p   p |
-+---+---+---+---+---+---+---+---+---+
-```
-
----
-
-## License
-
-This project is for educational purposes as part of the **42 curriculum**.
-
+AI Usage: AI (LLM) was utilized primarily as a technical assistant to overcome specific toolchain hurdles. Specifically, AI was used to understand modern Python pyproject.toml configuration, to resolve obscure mypy strict type-hinting errors, and to learn how to properly isolate flake8 linting within a Makefile to avoid scanning virtual environment files. AI was not used to write the core algorithmic logic.

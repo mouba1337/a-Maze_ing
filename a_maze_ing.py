@@ -1,15 +1,30 @@
 import os
 import random
-from sys import argv
+import sys
 from time import sleep
 from typing import Dict, Any, List, Optional
+from mazegen.generator import MazeGenerator
+from mazegen.parse import load_maze_config
 
-# On importe les bons noms !
-from mazegen import MazeGenerator
-from mazegen import load_maze_config
 
 class MazeRenderer:
-    def __init__(self, generator: MazeGenerator):
+    """
+    Handles the visual ASCII representation and animation
+    of the maze in the terminal.
+
+    This class reads the grid and solution data from a MazeGenerator instance
+    and prints it using ANSI escape codes for coloring.
+
+    Attributes:
+        generator (MazeGenerator): The maze generator instance
+        containing grid data.
+        wall_color (str): ANSI escape code for the current wall color.
+        color_1 (str): ANSI escape code for the '42' pattern color.
+        color_2 (str): ANSI escape code for the entry, exit, and solution path.
+        reset_col (str): ANSI escape code to reset terminal formatting.
+    """
+    def __init__(self, generator: MazeGenerator) -> None:
+        """Initializes the renderer with a generator and default colors."""
         self.generator = generator
         self.wall_color = "\033[37m"
         self.color_1 = "\033[31m"  # Rouge (pour 42)
@@ -17,13 +32,29 @@ class MazeRenderer:
         self.reset_col = "\033[0m"
 
     def change_wall_color(self) -> None:
-        colors = ["\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m", "\033[93m", "\033[94m"]
+        """Randomly selects a new ANSI color for the maze walls."""
+        colors = [
+            "\033[33m", "\033[34m", "\033[35m", "\033[36m",
+            "\033[37m", "\033[93m", "\033[94m"
+            ]
         self.wall_color = random.choice(colors)
 
     def wipe_screen(self) -> None:
+        """Clears the terminal screen for smooth animation and redrawing."""
         os.system("clear")
 
-    def render_grid(self, current_trail: Optional[List[List[int]]] = None) -> None:
+    def render_grid(
+        self,
+        current_trail: Optional[List[List[int]]] = None,
+    ) -> None:
+        """
+        Prints the current state of the maze grid to the terminal.
+
+        Args:
+            current_trail (Optional[List[List[int]]]):
+            An optional list of coordinates
+                representing the solution path to be drawn over the maze.
+        """
         wall_c = self.wall_color
         print(wall_c + "█" + ("████" * self.generator.cols) + self.reset_col)
 
@@ -38,9 +69,9 @@ class MazeRenderer:
                 val = self.generator.grid[r][c]
 
                 # 1. Le Centre
-                if c == self.generator.start_pos[0] and r == self.generator.start_pos[1]:
+                if (c, r) == self.generator.start_pos:
                     row_mid += self.color_2 + " S " + self.reset_col
-                elif c == self.generator.end_pos[0] and r == self.generator.end_pos[1]:
+                elif (c, r) == self.generator.end_pos:
                     row_mid += self.color_2 + " E " + self.reset_col
                 elif (c, r) in pattern_42_cells:
                     row_mid += self.color_1 + " █ " + self.reset_col
@@ -77,7 +108,8 @@ class MazeRenderer:
         sleep(0.005)
 
     def animate_solution(self) -> None:
-        trail = []
+        """Animates the shortest path finding process step-by-step."""
+        trail: List[List[int]] = []
         for step in self.generator.solution_coords:
             trail.append(step)
             self.wipe_screen()
@@ -85,30 +117,27 @@ class MazeRenderer:
             self.render_grid(trail)
             sleep(0.08)
 
-# --- LE MENU PRINCIPAL ---
-if __name__ == "__main__":
-    if len(argv) != 2:
-        print("Usage: python a_maze_ing.py <config_file>")
-        exit(1)
 
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python a_maze_ing.py <config_file>")
+        sys.exit(1)
     try:
-        config: Dict[str, Any] = load_maze_config(argv[1])
+        config: Dict[str, Any] = load_maze_config(sys.argv[1])
     except Exception as e:
         print(f"A_MAZE_ING: Config/Error occurred: {e}")
-        exit(1)
-
+        sys.exit(1)
     try:
         generator = MazeGenerator(config)
         renderer = MazeRenderer(generator)
-        
-        # On passe la fonction d'animation au générateur
+
         generator.build_labyrinth(render_callback=renderer.animate_generation)
 
         choices: List[str] = ["1", "2", "3", "4"]
         i: str = "1"
         show_path: bool = False
 
-        renderer.wipe_screen() 
+        renderer.wipe_screen()
         renderer.render_grid()
 
         while i != "4":
@@ -127,7 +156,9 @@ if __name__ == "__main__":
                 renderer.wipe_screen()
                 generator = MazeGenerator(config)
                 renderer = MazeRenderer(generator)
-                generator.build_labyrinth(render_callback=renderer.animate_generation)
+                generator.build_labyrinth(
+                    render_callback=renderer.animate_generation
+                )
                 show_path = False
                 renderer.wipe_screen()
                 renderer.render_grid()
@@ -150,4 +181,4 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"A_MAZE_ING: an error occurred: {e}")
-        exit(1)
+        sys.exit(1)

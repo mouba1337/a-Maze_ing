@@ -11,15 +11,19 @@ def check_bounds(
     """Ensures a given coordinate point is within the maze grid."""
     x, y = point
     if x < 0 or y < 0:
-        raise ValueError(f"[{label}] Error: Coordinates cannot be negative -> {point}")
+        raise ValueError(f"[{label}] Error: Coordinates"
+                         f"cannot be negative -> {point}")
     if x >= width or y >= height:
         raise ValueError(
-            f"[{label}] Error: Position {point} exceeds maze dimensions {width}x{height}"
+            f"[{label}] Error: Position {point} exceeds"
+            f"maze dimensions {width}x{height}"
         )
 
 
 def _parse_tuple(coord_string: str, label: str) -> Tuple[int, int]:
-    """Converts a comma-separated string into a coordinate tuple safely."""
+    """"
+    Converts a comma-separated string into acoordinate tuple safely.
+    """
     elements = coord_string.split(",")
     if len(elements) != 2:
         raise ValueError(
@@ -28,7 +32,8 @@ def _parse_tuple(coord_string: str, label: str) -> Tuple[int, int]:
     try:
         return int(elements[0]), int(elements[1])
     except ValueError:
-        raise ValueError(f"[{label}] Error: Coordinate values must be integers.")
+        raise ValueError(f"[{label}] Error: Coordinate"
+                         "values must be integers.")
 
 
 def load_maze_config(filepath: str) -> Dict[str, Any]:
@@ -50,7 +55,8 @@ def load_maze_config(filepath: str) -> Dict[str, Any]:
         with open(filepath, mode="r", encoding="utf-8") as f:
             lines = f.readlines()
     except FileNotFoundError:
-        raise ValueError(f"Fatal: Could not locate config file at '{filepath}'")
+        raise ValueError("Fatal: Could not locate config"
+                         f"file at '{filepath}'")
 
     # Process each line
     for raw_text in lines:
@@ -61,7 +67,8 @@ def load_maze_config(filepath: str) -> Dict[str, Any]:
             continue
 
         if "=" not in clean_text:
-            raise ValueError(f"Syntax Error: Missing '=' in line -> {clean_text}")
+            raise ValueError("Syntax Error: Missing '='"
+                             f"in line -> {clean_text}")
 
         left_part, right_part = clean_text.split("=", 1)
         cfg_key = left_part.strip().lower()
@@ -83,15 +90,18 @@ def load_maze_config(filepath: str) -> Dict[str, Any]:
         parsed_data["width"] = int(parsed_data["width"])
         parsed_data["height"] = int(parsed_data["height"])
     except ValueError:
-        raise ValueError("Type Error: 'WIDTH' and 'HEIGHT' must be integers.")
+        raise ValueError("Type Error: 'WIDTH' and"
+                         "'HEIGHT' must be integers.")
 
     if parsed_data["width"] <= 0 or parsed_data["height"] <= 0:
-        raise ValueError("Value Error: Dimensions must be greater than zero.")
+        raise ValueError("Value Error: Dimensions must be"
+                         "greater than zero.")
 
     # Handle the 42 pattern warning
     if parsed_data["width"] < 9 or parsed_data["height"] < 7:
         print(
-            "Warning: Maze is too small to render the '42' pattern (min 9x7).",
+            "Warning: Maze is too small to render the '42'"
+            "pattern (min 9x7).",
             file=sys.stderr,
         )
 
@@ -100,18 +110,23 @@ def load_maze_config(filepath: str) -> Dict[str, Any]:
     end_pt = _parse_tuple(str(parsed_data["exit"]), "EXIT")
 
     if start_pt == end_pt:
-        raise ValueError("Logic Error: ENTRY and EXIT cannot be the same cell.")
+        raise ValueError("Logic Error: ENTRY and EXIT cannot"
+                         "be the same cell.")
 
-    check_bounds(start_pt, parsed_data["width"], parsed_data["height"], "ENTRY")
-    check_bounds(end_pt, parsed_data["width"], parsed_data["height"], "EXIT")
-
+    check_bounds(
+        start_pt, parsed_data["width"], parsed_data["height"], "ENTRY"
+    )
+    check_bounds(
+        end_pt, parsed_data["width"], parsed_data["height"], "EXIT"
+    )
     parsed_data["entry"] = start_pt
     parsed_data["exit"] = end_pt
 
     # Boolean conversion for perfect flag
     perf_string = str(parsed_data["perfect"]).strip().lower()
     if perf_string not in ("true", "false"):
-        raise ValueError("Type Error: 'PERFECT' must be strictly 'True' or 'False'.")
+        raise ValueError("Type Error: 'PERFECT' must be"
+                         "strictly 'True' or 'False'.")
     parsed_data["perfect"] = perf_string == "true"
 
     # Handle optional seed safely
